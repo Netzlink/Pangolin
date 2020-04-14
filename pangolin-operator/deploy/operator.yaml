@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pangolin-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: pangolin-operator
+  template:
+    metadata:
+      labels:
+        name: pangolin-operator
+    spec:
+      serviceAccountName: pangolin-operator
+      containers:
+        - name: pangolin-operator
+          # Replace this with the built image name
+          image: docker.netzlink.com/operators/pangolin-operator@sha256:5aecee52a0b756115e848b81ff4fd86a3484a8fe9165b08b168246e6fe5305fe
+          command:
+          - pangolin-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "pangolin-operator"
