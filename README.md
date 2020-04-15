@@ -1,3 +1,10 @@
+ ``` 
+    ___
+   /. `\_._._._.
+  / _/_ _ _ _ _|\
+  |/ / \____/__/\\
+    ///   |/|/   \_
+```
 # Pangolin
 An operator for most common database-backups to s3
 
