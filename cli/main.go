@@ -13,11 +13,17 @@ var (
 		Version:  "v1alpha1",
 		Resource: "backupjobs",
 	}
+	logo = `
+	     ___
+	    /. '\_._._._.
+   	   / _/_ _ _ _ _|\
+   	  |/  /\____/__/\\
+	     ///   |/|/  \_`
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Pangolin holds your back!\nVersion:\tv1alpha1")
+		fmt.Println(logo, "\n\nPangolin holds your back!\nVersion:\tv1alpha1")
 		return
 	}
 	verb := os.Args[1]
