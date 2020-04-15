@@ -16,6 +16,10 @@ var (
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Pangolin holds your back!\nVersion:\tv1alpha1")
+		return
+	}
 	verb := os.Args[1]
 	switch verb {
 		case "get":
