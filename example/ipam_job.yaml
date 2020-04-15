@@ -11,8 +11,8 @@ spec:
     endpoint: mariadb-0.mariadb.netzwerk.svc.cluster.local # maybe port
     database: phpipam
     user: root
-    passwordSecret: ipam-database-secret
+    passwordSecret: ipam-database-bakup-secret
   s3Config:
     endpoint: http://rook-ceph-rgw-ocp4-object-store.rook-ceph.svc.cluster.local
     bucket:   pangolin-backups
-    secret:   pangolin-rook
+    secret:   ipam-database-bakup-secret
