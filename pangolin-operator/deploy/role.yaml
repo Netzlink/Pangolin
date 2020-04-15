@@ -24,12 +24,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - apps
+  - batch
   resources:
-  - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
+  - cronjobs
   verbs:
   - create
   - delete

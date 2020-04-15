@@ -2,7 +2,6 @@ package backupjob
 
 import (
 	"context"
-	"fmt"
 
 	pangolinv1alpha1 "github.com/Netzlink/pangolin/pangolin-operator/pkg/apis/pangolin/v1alpha1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -135,7 +134,7 @@ func (r *ReconcileBackupJob) Reconcile(request reconcile.Request) (reconcile.Res
 
 // newPodForCR returns a busybox pod with the same name/namespace as the cr
 func newJobForCR(cr *pangolinv1alpha1.BackupJob) *batchv1beta1.CronJob {
-	backupImageName, backupCommand := getBackupImageNameAndCommand(cr)
+	backupImageName, backupCommand,  backupArgs := getBackupImageNameAndCommand(cr)
 	labels := map[string]string{
 		"app": cr.Name,
 	}
@@ -151,6 +150,7 @@ func newJobForCR(cr *pangolinv1alpha1.BackupJob) *batchv1beta1.CronJob {
 				Spec: batchv1.JobSpec{
 					Template: v1.PodTemplateSpec{
 						Spec: v1.PodSpec{
+							RestartPolicy: "OnFailure",
 							Volumes: []v1.Volume{
 								v1.Volume{
 									Name: cr.Name + "-pangolin-volume",
@@ -161,8 +161,10 @@ func newJobForCR(cr *pangolinv1alpha1.BackupJob) *batchv1beta1.CronJob {
 							},
 							InitContainers: []v1.Container{
 								v1.Container{
+									Name: cr.Name + "-backup",
 									Image:   backupImageName,
-									Command: []string{backupCommand},
+									Command: []string{ backupCommand },
+									Args: backupArgs,
 									VolumeMounts: []v1.VolumeMount{
 										v1.VolumeMount{
 											Name:      cr.Name + "-pangolin-volume",
@@ -183,7 +185,11 @@ func newJobForCR(cr *pangolinv1alpha1.BackupJob) *batchv1beta1.CronJob {
 											Value: cr.Spec.DatabaseConfig.User,
 										},
 										v1.EnvVar{
-											Name: "PANGOLIN_HOST",
+											Name:  "PANGOLIN_EXTRAS",
+											Value: cr.Spec.Extras,
+										},
+										v1.EnvVar{
+											Name: "PANGOLIN_PASSWORD",
 											ValueFrom: &v1.EnvVarSource{
 												SecretKeyRef: &v1.SecretKeySelector{
 													LocalObjectReference: v1.LocalObjectReference{
@@ -198,10 +204,15 @@ func newJobForCR(cr *pangolinv1alpha1.BackupJob) *batchv1beta1.CronJob {
 							},
 							Containers: []v1.Container{
 								v1.Container{
-									Image:   "minio/mc:RELEASE.2020-04-04T05-28-55Z",
-									Command: []string{
-										"mc config host add s3 $PANGULIN_ENDPOINT $PANGULIN_ACCESS_KEY $PANGULIN_SECRET_KEY ;",
-										"mc cp -r /backup s3/$PANGULIN_BUCKET",
+									Name: cr.Name + "-s3-uploader",
+									Image:   "amazon/aws-cli",
+									Args: []string{
+										"--endpoint-url=$(PANGOLIN_ENDPOINT)",
+										"s3",
+        								"cp",
+        								"/backup",
+        								"s3://$(PANGOLIN_BUCKET)/$(PANGOLIN_JOB)-job",
+        								"--recursive",
 									},
 									VolumeMounts: []v1.VolumeMount{
 										v1.VolumeMount{
@@ -212,14 +223,18 @@ func newJobForCR(cr *pangolinv1alpha1.BackupJob) *batchv1beta1.CronJob {
 									Env: []v1.EnvVar{
 										v1.EnvVar{
 											Name:  "PANGOLIN_ENDPOINT",
-											Value: cr.Spec.DatabaseConfig.Endpoint,
+											Value: cr.Spec.S3Config.Endpoint,
 										},
 										v1.EnvVar{
 											Name:  "PANGOLIN_BUCKET",
-											Value: cr.Spec.DatabaseConfig.Database,
+											Value: cr.Spec.S3Config.Bucket,
 										},
 										v1.EnvVar{
-											Name:  "PANGOLIN_ACCESS_KEY",
+											Name:  "PANGOLIN_JOB",
+											Value: cr.Name,
+										},
+										v1.EnvVar{
+											Name:  "AWS_ACCESS_KEY_ID",
 											ValueFrom: &v1.EnvVarSource{
 												SecretKeyRef: &v1.SecretKeySelector{
 													LocalObjectReference: v1.LocalObjectReference{
@@ -230,7 +245,7 @@ func newJobForCR(cr *pangolinv1alpha1.BackupJob) *batchv1beta1.CronJob {
 											},
 										},
 										v1.EnvVar{
-											Name: "PANGOLIN_SECRET_KEY",
+											Name: "AWS_SECRET_ACCESS_KEY",
 											ValueFrom: &v1.EnvVarSource{
 												SecretKeyRef: &v1.SecretKeySelector{
 													LocalObjectReference: v1.LocalObjectReference{
@@ -251,30 +266,76 @@ func newJobForCR(cr *pangolinv1alpha1.BackupJob) *batchv1beta1.CronJob {
 	}
 }
 
-func getBackupImageNameAndCommand(cr *pangolinv1alpha1.BackupJob) (string, string) {
+func getBackupImageNameAndCommand(cr *pangolinv1alpha1.BackupJob) (string, string, []string) {
 	var imageName string
 	var command string
+	var args []string
 
+	if cr.Spec.Type.Mssql {
+		// https://docs.microsoft.com/en-us/sql/tools/sqlcmd-utility?view=sql-server-ver15
+		imageName = "mcr.microsoft.com/mssql/server:2019-latest"
+		command = "sqlcmd"
+		args = []string{
+			"-S",
+			"$(PANGOLIN_HOST)",
+			"-U",
+			"$(PANGOLIN_USER)",
+			"-P",
+			"$(PANGOLIN_PASSWORD)",
+			"-Q",
+			`"BACKUP DATABASE [$(PANGOLIN_DATABASE)] TO DISK = N'/backup/dump.bak' WITH NOFORMAT, NOINIT, NAME = '$(PANGOLIN-DATABASE)-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"`,
+		}
+		return imageName, command, args
+	}
 	if cr.Spec.Type.Mariadb || cr.Spec.Type.Mysql {
 		imageName = "mariadb:10.5.2"
-		command = "mysqldump --host $PANGOLIN_HOST--databases $PANGOLIN_DATABASE --user $PANGOLIN_USER --password $PANGOLIN_PASSWORD $PANGULIN_EXTRAS > /backup/dump.sql"
-		return imageName, command
+		command = "mysqldump"
+		args = []string{
+			"--host=$(PANGOLIN_HOST)",
+			"--databases",
+			"$(PANGOLIN_DATABASE)",
+			"--user=$(PANGOLIN_USER)",
+			"--password=$(PANGOLIN_PASSWORD)",
+			"$(PANGOLIN_EXTRAS)",
+			"--result-file=/backup/dump.sql",
+		}
+		return imageName, command, args
 	}
 	if cr.Spec.Type.Mongodb {
 		imageName = "mongo:3.6.17"
-		command = "mongodump --host=$PANGOLIN_HOST --db $PANGOLIN_DATABASE  --username=$PANGOLIN_USER --password=$PANGOLIN_PASSWORD $PANGULIN_EXTRAS --out /backup"
-		return imageName, command
+		command = "mongodump"
+		args = []string{
+			"--host=$(PANGOLIN_HOST)",
+			"--db=$(PANGOLIN_DATABASE)",
+			"--username=$(PANGOLIN_USER)",
+			"--password=$(PANGOLIN_PASSWORD)",
+			"$(PANGOLIN_EXTRAS)",
+			"--out",
+			"/backup",
+		}
+		return imageName, command, args
 	}
 	if cr.Spec.Type.Postgres {
 		imageName = "postgres:12.2"
-		command = "pg_dump $PANGULIN_EXTRAS -h $PANGOLIN_HOST -U $PANGULIN_USER -W $PANGULIN_PASSWORD $PANGULIN_DATABASE > /backup/dump.sql"
-		return imageName, command
+		command = "pg_dump"
+		args = []string{
+			"$(PANGOLIN_EXTRAS)",
+			"-h",
+			"$(PANGOLIN_HOST)",
+			"-U",
+			"$(PANGULIN_USER)",
+			"-W",
+			"$(PANGULIN_PASSWORD)",
+			"$(PANGULIN_DATABASE)",
+			">",
+			"/backup/dump.sql",
+		}
+		return imageName, command, args
 	}
 	if cr.Spec.Type.Custom.Enabled {
 		imageName = cr.Spec.Type.Custom.Image
-		command = cr.Spec.Type.Custom.CommandTemplate
-		return imageName, command
+		command = "sh"
+		return imageName, command, []string{ "-c", cr.Spec.Type.Custom.CommandTemplate }
 	}
-	fmt.Println("No Image specified in Job: " + cr.Name)
-	return "", ""
+	return "", "echo", []string{"No image specified in job"}
 }

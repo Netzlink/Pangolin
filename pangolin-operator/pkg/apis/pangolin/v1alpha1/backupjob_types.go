@@ -7,6 +7,7 @@ import (
 type BackupJobSpec struct {
 	Schedule string `json:"schedule,omitempty"`
 	Type     struct {
+		Mssql	 bool `json:"mssql"`
 		Mariadb  bool `json:"mariadb"`
 		Mysql    bool `json:"mysql"`
 		Mongodb  bool `json:"mongodb"`

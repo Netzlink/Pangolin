@@ -3,7 +3,8 @@ kind: BackupJob
 metadata:
   name: example-backupjob
 spec:
-  schedule: "5 4 * * *"
+  schedule: "57 * * * *"
+  extras: ""
   type:
     mssql: false
     mariadb: false
@@ -12,6 +13,7 @@ spec:
     postgres: true
     custom:
       enabled: false
+      commandTemplate: ""
       image: arangodb:2.8
   databaseConfig:
     endpoint: example-postgres # maybe port

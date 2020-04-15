@@ -16,7 +16,7 @@ spec:
       containers:
         - name: pangolin-operator
           # Replace this with the built image name
-          image: docker.netzlink.com/operators/pangolin-operator@sha256:5aecee52a0b756115e848b81ff4fd86a3484a8fe9165b08b168246e6fe5305fe
+          image: docker.netzlink.com/operators/pangolin-operator@sha256:773ac92f8a9d860b532618156de193d7d89dde9cd39b7a7895e930a558e3b53e
           command:
           - pangolin-operator
           imagePullPolicy: Always

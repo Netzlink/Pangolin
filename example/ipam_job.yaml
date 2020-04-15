@@ -1,0 +1,35 @@
+apiVersion: pangolin.netzlink.com/v1alpha1
+kind: BackupJob
+metadata:
+  name: nli-ipam
+spec:
+  schedule: "*/5 * * * *"
+  extras: "-q"
+  type:
+    mariadb: true
+  databaseConfig:
+    endpoint: mariadb-0.mariadb.netzwerk.svc.cluster.local # maybe port
+    database: phpipam
+    user: root
+    passwordSecret: ipam-database-secret
+  s3Config:
+    endpoint: http://rook-ceph-rgw-ocp4-object-store.rook-ceph.svc.cluster.local
+    bucket:   pangolin-backups
+    secret:   pangolin-rook
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ipam-database-secret
+data:
+   password:  SECURE_SECRET
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pangolin-rook
+data:
+   access-key:  AWS-ACCESS_KEY
+   secret-key:  AWS-SECRET_KEY
+type: Opaque
