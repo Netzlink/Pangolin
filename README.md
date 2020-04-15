@@ -26,7 +26,7 @@ kubectl -n pangolin get pods -w
 ## Usage
 We give you two ways to configure backup-jobs:
 - CustomRessource
-- CLI (future)
+- CLI (in making)
 - Dashboard (future)
 ### CustomRessource Example
 This is a fully configured example of our CRD
@@ -82,3 +82,43 @@ data:
   access-key: YWRtaW4=
   secret-key: MWYyZDFlMmU2N2Rm
 ```
+### CLI
+## Installation
+*__optional__ Install golang if not already*
+*Set the PATH*
+```bash
+export PATH="$PATH:$GOPATH/bin"
+```
+Install pangolin-cli
+```bash
+go install github.com/Netzlink/Pangolin/cli
+```
+Verify the installation
+```bash
+pangolin
+```
+You schould be greeted by a nice pangolin!
+```text
+	     ___
+	    /. '\_._._._.
+   	   / _/_ _ _ _ _|\
+   	  |/  /\____/__/\\
+	     ///   |/|/  \_ 
+
+Pangolin holds your back!
+Version:	v1alpha1
+```
+## Get your BackupJobs
+```bash
+pangolin get
+```
+if there are backup-jobs the output should roughly resemble this:
+```text
+Number	Name		Schedule	Type	Database	Bucket
+0	nli-ipam	0 */12 * * *	MariaDB	mariadb-0	pangolin-backups
+```
+## Create a Backup
+We are working on this bit :D
+
+# Contribution
+Although the license isnt specified yet you are welcome to contribute via _pulls_ and _issues_
