@@ -3,7 +3,7 @@ kind: BackupJob
 metadata:
   name: nli-ipam
 spec:
-  schedule: "*/5 * * * *"
+  schedule: "0 */12 * * *"
   extras: "-q"
   type:
     mariadb: true
@@ -16,20 +16,3 @@ spec:
     endpoint: http://rook-ceph-rgw-ocp4-object-store.rook-ceph.svc.cluster.local
     bucket:   pangolin-backups
     secret:   pangolin-rook
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ipam-database-secret
-data:
-   password:  SECURE_SECRET
-type: Opaque
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: pangolin-rook
-data:
-   access-key:  AWS-ACCESS_KEY
-   secret-key:  AWS-SECRET_KEY
-type: Opaque
