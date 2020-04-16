@@ -305,10 +305,14 @@ func getBackupImageNameAndCommand(cr *pangolinv1alpha1.BackupJob) (string, strin
 		imageName = "mongo:3.6.17"
 		command = "mongodump"
 		args = []string{
-			"--host=$(PANGOLIN_HOST)",
-			"--db=$(PANGOLIN_DATABASE)",
-			"--username=$(PANGOLIN_USER)",
-			"--password=$(PANGOLIN_PASSWORD)",
+			"--host",
+			"$(PANGOLIN_HOST)",
+			"--db",
+			"$(PANGOLIN_DATABASE)",
+			"--username",
+			"$(PANGOLIN_USER)",
+			"--password",
+			"$(PANGOLIN_PASSWORD)",
 			"$(PANGOLIN_EXTRAS)",
 			"--out",
 			"/backup",
@@ -327,7 +331,7 @@ func getBackupImageNameAndCommand(cr *pangolinv1alpha1.BackupJob) (string, strin
 			"-W",
 			"$(PANGULIN_PASSWORD)",
 			"$(PANGULIN_DATABASE)",
-			">",
+			"-f",
 			"/backup/dump.sql",
 		}
 		return imageName, command, args
