@@ -31,7 +31,7 @@ func main() {
 		case "get":
 			GetBackupJobs()
 		case "create":
-			CreateBackupJob()
+			fmt.Println("Not implemented yet")
 		case "delete": 
 			fmt.Println("Not implemented yet")
 		default:
